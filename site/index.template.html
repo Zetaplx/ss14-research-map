@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SS14 Research Technology Map</title>
+<style>
+:root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 18px; background: Canvas; color: CanvasText; }
+main { max-width: 2300px; margin: 0 auto; }
+h1 { margin: 0 0 4px; font-size: clamp(1.4rem, 2.4vw, 1.9rem); font-weight: 650; }
+.subtle { color: color-mix(in srgb, CanvasText 68%, Canvas); }
+.intro { margin: 0 0 13px; line-height: 1.4; font-size: .92rem; }
+.controls { display: flex; flex-wrap: wrap; align-items: end; gap: 9px; margin-bottom: 10px; }
+.field { display: grid; gap: 4px; min-width: 145px; }
+.field.search { flex: 1 1 300px; }
+label, .small { font-size: .9rem; }
+input, select, button { font: inherit; color: inherit; }
+input, select { padding: 8px 10px; border: 1px solid color-mix(in srgb, CanvasText 24%, Canvas); border-radius: 8px; background: Canvas; }
+button { cursor: pointer; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 8px; font-size: .9rem; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.industrial { --disc: #d99a24; } .arsenal { --disc: #db5054; } .experimental { --disc: #9b76e8; } .civilian-services { --disc: #5caa3c; }
+.lane-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--disc); }
+.stats { margin: 0 0 7px; font-size: .88rem; }
+.map-scroll { width: 100%; overflow-x: auto; padding-bottom: 8px; }
+.board { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(3, minmax(390px, 1fr)); gap: 76px; min-width: 1380px; }
+.tier-col { position: relative; z-index: 1; min-width: 0; padding-top: 82px; }
+.tier-head { position: absolute; top: 40px; left: 0; right: 0; min-height: 37px; margin: 0 0 8px; padding: 0 0 6px; border-bottom: 1px solid color-mix(in srgb, CanvasText 18%, Canvas); }
+.tier-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem; font-weight: 650; }
+.tier-head p { margin: 2px 0 0; font-size: .85rem; color: color-mix(in srgb, CanvasText 62%, Canvas); }
+.tier-arrow { color: color-mix(in srgb, CanvasText 52%, Canvas); font-weight: 400; }
+.lane { position: relative; margin: 0 0 13px; }
+.lane-title { display: flex; align-items: center; gap: 7px; margin: 0 0 5px; color: color-mix(in srgb, CanvasText 77%, Canvas); font-size: .85rem; font-weight: 650; letter-spacing: .015em; }
+.nodes { display: grid; gap: 5px; margin-right: 54px; }
+.node { position: relative; z-index: 2; display: block; width: 100%; min-width: 0; min-height: 43px; padding: 6px 9px; border: 1px solid color-mix(in srgb, CanvasText 15%, Canvas); border-radius: 7px; background: color-mix(in srgb, var(--disc) 10%, Canvas); text-align: left; transition: background .12s, border-color .12s; }
+.node:hover { background: color-mix(in srgb, var(--disc) 18%, Canvas); }
+.node[aria-pressed="true"] { border-color: var(--disc); background: color-mix(in srgb, var(--disc) 22%, Canvas); }
+.node.is-related { border-color: color-mix(in srgb, var(--disc) 70%, CanvasText); }
+.node-name { display: block; font-size: .88rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.node-meta { display: flex; justify-content: space-between; gap: 6px; margin-top: 3px; font-size: .78rem; color: color-mix(in srgb, CanvasText 69%, Canvas); }
+.edges { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.edge { fill: none; stroke: color-mix(in srgb, CanvasText 50%, transparent); stroke-width: 1.8; opacity: .86; stroke-linecap: square; stroke-linejoin: miter; }
+.edge.is-active { stroke: color-mix(in srgb, CanvasText 90%, transparent); stroke-width: 2.6; opacity: 1; }
+aside { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: minmax(220px, .7fr) minmax(200px, .8fr) minmax(300px, 1.4fr) minmax(200px, .8fr); gap: 12px; align-items: start; margin: 0 0 14px; padding: 10px 0; background: Canvas; border-bottom: 1px solid color-mix(in srgb, CanvasText 18%, Canvas); }
+.detail-title { font-size: 1.02rem; line-height: 1.25; margin: 0 0 5px; }
+.detail-meta { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; }
+.pill { display: inline-block; border-radius: 999px; padding: 3px 7px; background: color-mix(in srgb, CanvasText 9%, Canvas); font-size: .78rem; }
+.detail-block h3 { margin: 0 0 5px; font-size: .85rem; }
+.link-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.link { border: 1px solid color-mix(in srgb, CanvasText 17%, Canvas); border-radius: 6px; padding: 4px 6px; background: color-mix(in srgb, CanvasText 4%, Canvas); font-size: .8rem; text-align: left; }
+.link:hover { background: color-mix(in srgb, CanvasText 11%, Canvas); }
+.recipe-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px 12px; max-height: 92px; overflow: auto; margin: 0; padding: 0 6px 0 16px; font-size: .8rem; }
+.recipe-list li { padding: 1px 0; line-height: 1.3; overflow-wrap: anywhere; }
+.empty { padding: 8px 0; }
+footer { margin-top: 12px; font-size: .82rem; }
+@media (max-width: 1050px) { aside { grid-template-columns: 1fr 1fr; position: static; } }
+@media (max-width: 640px) { body { padding: 12px; } .controls { display: grid; grid-template-columns: 1fr 1fr; } .field.search { grid-column: 1 / -1; } aside { grid-template-columns: 1fr; } .board { grid-template-columns: repeat(3, minmax(390px, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>SS14 Research Technology Map</h1>
+  <p class="intro subtle">Tier depth runs left to right. Straight connector lines show direct prerequisites; they route through the gutters between nodes. Select a technology for its cost, unlocks, and dependents. Tier 2 and 3 also require at least half of the previous tier unlocked in that discipline.</p>
+  <div class="controls" aria-label="Map filters">
+    <div class="field search"><label for="search">Search technologies and unlocks</label><input id="search" type="search" placeholder="EVA, power, teleporter…"></div>
+    <div class="field"><label for="discipline">Discipline</label><select id="discipline"><option value="">All disciplines</option><option>Industrial</option><option>Arsenal</option><option>Experimental</option><option>Civilian Services</option></select></div>
+    <div class="field"><label for="tier">Tier</label><select id="tier"><option value="">All tiers</option><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option></select></div>
+  </div>
+  <div class="legend subtle" aria-label="Disciplines"><span class="industrial"><i class="lane-dot"></i>Industrial</span><span class="arsenal"><i class="lane-dot"></i>Arsenal</span><span class="experimental"><i class="lane-dot"></i>Experimental</span><span class="civilian-services"><i class="lane-dot"></i>Civilian Services</span></div>
+  <aside id="detail" aria-live="polite" aria-label="Selected technology details"></aside>
+  <div class="map-scroll"><div class="map" id="map" aria-label="Research technology dependency map"></div></div>
+  <footer class="subtle">Source definitions: Resources/Prototypes/Research, Resources/Prototypes/_Persistence14/Research, and Resources/Prototypes/_Moffstation/Research. Costs are base research points; server multipliers may change charged cost. Recipe quantities are configured recipe unlock counts.</footer>
+</main>
+<script>
+const technologies = RESEARCH_DATA;
+const map = document.getElementById('map');
+const detail = document.getElementById('detail');
+const search = document.getElementById('search');
+const disciplineFilter = document.getElementById('discipline');
+const tierFilter = document.getElementById('tier');
+let selected = technologies[0];
+const groups = ['Industrial','Arsenal','Experimental','Civilian Services'];
+const key = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const classFor = s => s.toLowerCase().replace(/\s+/g, '-');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lookup = new Map(technologies.map(t => [key(t.name), t]));
+function visibleItems() {
+  const q = key(search.value);
+  return technologies.filter(t => {
+    if (disciplineFilter.value && t.discipline !== disciplineFilter.value) return false;
+    if (tierFilter.value && String(t.tier) !== tierFilter.value) return false;
+    if (!q) return true;
+    return key([t.name, t.discipline, ...t.requires, ...t.recipes.map(r => r.name)].join(' ')).includes(q);
+  });
+}
+function drawMap() {
+  const visible = visibleItems();
+  const visibleKeys = new Set(visible.map(t => key(t.name)));
+  let html = `<p class="stats subtle" aria-live="polite">Showing ${visible.length} of ${technologies.length} technologies · ${technologies.filter(t => t.requires.length).length} explicit prerequisite links</p><div class="board" id="board" role="group" aria-label="Technology tiers, left to right from tier 1 to tier 3"><svg class="edges" aria-hidden="true"></svg>`;
+  const tierLabels = ['Foundation','Expansion','Advanced'];
+  for (let tier = 1; tier <= 3; tier++) {
+    html += `<section class="tier-col" data-tier="${tier}"><header class="tier-head"><h2>Tier ${tier}${tier < 3 ? '<span class="tier-arrow" aria-hidden="true">→</span>' : ''}</h2><p>${tierLabels[tier - 1]}</p></header>`;
+    for (const discipline of groups) {
+      const nodes = visible.filter(t => t.discipline === discipline && t.tier === tier);
+      if (!nodes.length) continue;
+      nodes.sort((a, b) => {
+        const aHasSameTierParent = a.requires.some(n => lookup.get(key(n))?.tier === tier) ? 1 : 0;
+        const bHasSameTierParent = b.requires.some(n => lookup.get(key(n))?.tier === tier) ? 1 : 0;
+        return aHasSameTierParent - bHasSameTierParent || a.name.localeCompare(b.name);
+      });
+      html += `<section class="lane ${classFor(discipline)}"><h3 class="lane-title"><i class="lane-dot" aria-hidden="true"></i>${esc(discipline)}</h3><div class="nodes">`;
+      for (const t of nodes) {
+        html += `<button type="button" class="node ${classFor(discipline)}" data-key="${esc(key(t.name))}" aria-pressed="${selected === t}"><span class="node-name">${esc(t.name)}</span><span class="node-meta"><span>${esc(t.source)}</span><span>${t.cost.toLocaleString()} RP</span></span></button>`;
+      }
+      html += '</div></section>';
+    }
+    html += '</section>';
+  }
+  html += '</div>';
+  map.innerHTML = html;
+  map.querySelectorAll('.node').forEach(button => button.addEventListener('click', () => selectTechnology(lookup.get(button.dataset.key))));
+  requestAnimationFrame(() => drawEdges(visibleKeys));
+}
+function drawEdges(visibleKeys) {
+  const board = document.getElementById('board');
+  if (!board) return;
+  const svg = board.querySelector('.edges');
+  const rect = board.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const buttons = new Map([...board.querySelectorAll('.node')].map(el => [el.dataset.key, el]));
+  const related = new Set([key(selected.name), ...selected.requires.map(key)]);
+  technologies.filter(t => t.requires.some(r => key(r) === key(selected.name))).forEach(t => related.add(key(t.name)));
+  board.querySelectorAll('.node').forEach(el => el.classList.toggle('is-related', related.has(el.dataset.key) && el.dataset.key !== key(selected.name)));
+  const paths = [];
+  const counts = new Map();
+  const longCounts = new Map();
+  for (const child of technologies) {
+    for (const parentName of child.requires) {
+      const parent = lookup.get(key(parentName));
+      const from = buttons.get(key(parentName));
+      const to = buttons.get(key(child.name));
+      if (!parent || !from || !to || !visibleKeys.has(key(parent.name)) || !visibleKeys.has(key(child.name))) continue;
+      const a = from.getBoundingClientRect();
+      const b = to.getBoundingClientRect();
+      const ax = a.right - rect.left;
+      const ay = a.top + a.height / 2 - rect.top;
+      const bx = b.left - rect.left;
+      const by = b.top + b.height / 2 - rect.top;
+      let d = '';
+      if (parent.tier === child.tier) {
+        const laneRect = from.closest('.lane').getBoundingClientRect();
+        const k = `${parent.discipline}-${parent.tier}`;
+        const i = counts.get(k) || 0; counts.set(k, i + 1);
+        const trackX = laneRect.right - rect.left - 7 - (i % 6) * 7;
+        d = `M ${ax} ${ay} H ${trackX} V ${by} H ${b.right - rect.left}`;
+      } else if (child.tier - parent.tier === 1) {
+        const colRect = from.closest('.tier-col').getBoundingClientRect();
+        const k = `${parent.tier}-${child.tier}`;
+        const i = counts.get(k) || 0; counts.set(k, i + 1);
+        const trackX = colRect.right - rect.left + 6 + (i % 9) * 7;
+        d = `M ${ax} ${ay} H ${trackX} V ${by} H ${bx}`;
+      } else {
+        const fromLane = from.closest('.lane').getBoundingClientRect();
+        const toLane = to.closest('.lane').getBoundingClientRect();
+        const k = `${parent.discipline}-${child.discipline}`;
+        const i = longCounts.get(k) || 0; longCounts.set(k, i + 1);
+        const railY = 5 + i * 7;
+        const sourceRailX = fromLane.right - rect.left - 7 - (i % 4) * 8;
+        const targetRailX = toLane.right - rect.left - 7 - (i % 4) * 8;
+        d = `M ${ax} ${ay} H ${sourceRailX} V ${railY} H ${targetRailX} V ${by} H ${b.right - rect.left}`;
+      }
+      const active = related.has(key(child.name)) && related.has(key(parent.name));
+      paths.push(`<path class="edge${active ? ' is-active' : ''}" d="${d}"/>`);
+    }
+  }
+  svg.innerHTML = paths.join('');
+}
+function detailSection(title, content) { return `<section class="detail-block"><h3>${title}</h3>${content}</section>`; }
+function selectTechnology(t) { if (!t) return; selected = t; refresh(); }
+function detailLinks(items, emptyText) {
+  if (!items.length) return `<p class="small subtle">${emptyText}</p>`;
+  return `<div class="link-list">${items.map(item => `<button class="link" type="button" data-target="${esc(key(item.name))}">${esc(item.name)}</button>`).join('')}</div>`;
+}
+function drawDetail() {
+  if (!selected) { detail.innerHTML = '<p class="empty subtle">Choose a technology to see its details.</p>'; return; }
+  const parents = selected.requires.map(name => lookup.get(key(name))).filter(Boolean);
+  const children = technologies.filter(t => t.requires.some(name => key(name) === key(selected.name)));
+  const recipes = selected.recipes.length ? `<ul class="recipe-list">${selected.recipes.map(r => `<li>${esc(r.name)} <span class="subtle">×${r.quantity}</span></li>`).join('')}</ul>` : '<p class="small subtle">No recipe unlocks listed.</p>';
+  detail.innerHTML = `<section><h2 class="detail-title">${esc(selected.name)}</h2><div class="detail-meta"><span class="pill">${esc(selected.discipline)}</span><span class="pill">Tier ${selected.tier}</span><span class="pill">${selected.cost.toLocaleString()} RP</span><span class="pill">${esc(selected.source)}</span></div></section>` +
+    detailSection('Requires', detailLinks(parents, 'None listed; tier rules still apply.')) +
+    detailSection('Unlocks', recipes) +
+    detailSection('Dependents', detailLinks(children, 'None listed.'));
+  detail.querySelectorAll('[data-target]').forEach(button => button.addEventListener('click', () => {
+    const target = lookup.get(button.dataset.target);
+    if (target) { disciplineFilter.value = ''; tierFilter.value = ''; search.value = ''; selectTechnology(target); }
+  }));
+}
+function refresh() { drawMap(); drawDetail(); }
+search.addEventListener('input', refresh);
+disciplineFilter.addEventListener('change', refresh);
+tierFilter.addEventListener('change', refresh);
+window.addEventListener('resize', () => requestAnimationFrame(() => drawEdges(new Set(visibleItems().map(t => key(t.name))))));
+refresh();
+</script>
+</body>
+</html>
+
+

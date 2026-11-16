@@ -1,0 +1,70 @@
+name: Refresh and deploy research map
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: research-map-pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the map project
+        uses: actions/checkout@v4
+
+      - name: Refresh the source submodule
+        shell: bash
+        run: |
+          git submodule update --init --remote --depth 1 --filter=blob:none source
+          git -C source sparse-checkout init --cone
+          git -C source sparse-checkout set \
+            Resources/Prototypes/Research \
+            Resources/Prototypes/_Persistence14/Research \
+            Resources/Prototypes/_Moffstation/Research \
+            Resources/Locale/en-US/research \
+            Resources/Locale/en-US/_Persistence14/research \
+            Resources/Locale/en-US/_Moffstation/research
+          git add source
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: refresh SS14 source submodule"
+            git push
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the YAML parser
+        run: pip install -r requirements.txt
+
+      - name: Generate the current map
+        run: python build.py source/Resources
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Publish the site
+        id: deployment
+        uses: actions/deploy-pages@v4
